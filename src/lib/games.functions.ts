@@ -73,7 +73,7 @@ export const listGames = createServerFn({ method: "GET" })
       .parse(input ?? {}),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return emptyGameList;
@@ -109,7 +109,7 @@ export interface GenreSummary {
 }
 
 export const listGenres = createServerFn({ method: "GET" }).handler(async () => {
-  const apiKey = process.env.RAWG_API_KEY;
+  const apiKey = process.env.VITE_RAWG_API_KEY;
   if (!apiKey) {
     missingRawgKey();
     return { count: 0, results: [] };
@@ -122,7 +122,7 @@ export const upcomingGames = createServerFn({ method: "GET" })
     z.object({ page_size: z.number().int().min(1).max(40).default(12) }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return emptyGameList;
@@ -140,7 +140,7 @@ export const newlyReleasedGames = createServerFn({ method: "GET" })
     z.object({ page_size: z.number().int().min(1).max(40).default(12) }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return emptyGameList;
@@ -158,7 +158,7 @@ export const trendingGames = createServerFn({ method: "GET" })
     z.object({ page_size: z.number().int().min(1).max(40).default(12) }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return emptyGameList;
@@ -216,7 +216,7 @@ export const getGame = createServerFn({ method: "GET" })
     z.object({ slug: z.string().min(1).max(200) }).parse(input),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return fallbackGameDetail(data.slug);
@@ -236,7 +236,7 @@ export const getGameTrailers = createServerFn({ method: "GET" })
     z.object({ slug: z.string().min(1).max(200) }).parse(input),
   )
   .handler(async ({ data }): Promise<{ results: GameTrailer[] }> => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return { results: [] };
@@ -311,7 +311,7 @@ export const getSystemRequirements = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<SystemRequirements> => {
     const empty: SystemRequirements = { minimum: null, recommended: null };
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) return empty;
     const appid = await findSteamAppId(apiKey, data.slug);
     if (!appid) return empty;
@@ -347,7 +347,7 @@ export const getDeveloperGames = createServerFn({ method: "GET" })
       .parse(input),
   )
   .handler(async ({ data }): Promise<RawgListResponse> => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return emptyGameList;
@@ -372,7 +372,7 @@ export const getSimilarGames = createServerFn({ method: "GET" })
     z.object({ slug: z.string().min(1).max(200) }).parse(input),
   )
   .handler(async ({ data }): Promise<RawgListResponse> => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return emptyGameList;
@@ -467,7 +467,7 @@ export const getGameScreenshots = createServerFn({ method: "GET" })
     z.object({ slug: z.string().min(1).max(200) }).parse(input),
   )
   .handler(async ({ data }) => {
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return { results: [] };
@@ -572,7 +572,7 @@ export const getGameMeta = createServerFn({ method: "GET" })
       total_reviews: 0,
       price: null,
     };
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) return empty;
     let stores: { results: { url: string; store_id: number }[] };
     try {
@@ -643,7 +643,7 @@ export const getSteamReviews = createServerFn({ method: "GET" })
       positive_percent: 0,
       reviews: [],
     };
-    const apiKey = process.env.RAWG_API_KEY;
+    const apiKey = process.env.VITE_RAWG_API_KEY;
     if (!apiKey) {
       missingRawgKey();
       return empty;
