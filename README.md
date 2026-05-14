@@ -62,7 +62,7 @@ To run this project locally, you will need Node.js (v18+) installed on your mach
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repository-url>
+   git clone <https://github.com/Ankit-Raskar/VAPOR_Game_Store.git>
    cd VAPOR_Game_Store
    ```
 
