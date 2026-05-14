@@ -41,7 +41,15 @@ async function rawgFetch<T>(apiKey: string, path: string, params: Record<string,
   url.searchParams.set("key", apiKey);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`RAWG ${res.status}: ${await res.text()}`);
+
+console.log("RAWG URL:", url.toString());
+console.log("RAWG STATUS:", res.status);
+
+if (!res.ok) {
+  const text = await res.text();
+  console.error("RAWG ERROR:", text);
+  throw new Error(`RAWG ${res.status}: ${text}`);
+}
   return res.json() as Promise<T>;
 }
 
