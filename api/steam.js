@@ -10,13 +10,7 @@ export default async function handler(req, res) {
 
     if (appid) {
       const response = await fetch(
-        `https://steam2.p.rapidapi.com/appReviews/${appid}/limit/20/*`,
-        {
-          headers: {
-            "X-RapidAPI-Key": process.env.STEAM_API_KEY || "a7c8d6b50bmsha7ff17013912dadp14edd6jsnb207187ecff6",
-            "X-RapidAPI-Host": "steam2.p.rapidapi.com",
-          },
-        }
+        `https://store.steampowered.com/appreviews/${appid}?json=1&language=all&num_per_page=20`
       );
 
       const data = await response.json();
