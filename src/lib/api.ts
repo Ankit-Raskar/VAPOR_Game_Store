@@ -318,15 +318,28 @@ export interface SteamFeaturedItem {
 export async function steamFeatured() {
   const empty = { specials: [], topSellers: [], newReleases: [] };
   try {
-    const res = await fetch("/api/steam?offers=true");
-    if (!res.ok) return empty;
-    const json = await res.json();
+    let json = null;
+    const res = await fetch("/api/steam?offers=true").catch(() => ({ ok: false, json: async () => null, headers: new Headers() }));
+    
+    if (res.ok && (res as any).headers?.get("content-type")?.includes("application/json")) {
+      json = await (res as any).json();
+    } else {
+      const fallbackRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/api/featuredcategories?cc=us&l=en`)}`);
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.contents) json = JSON.parse(fallbackData.contents);
+      }
+    }
+    
+    if (!json) return empty;
+
     return {
       specials: json.specials?.items?.slice(0, 8) ?? [],
       topSellers: json.top_sellers?.items?.slice(0, 8) ?? [],
       newReleases: json.new_releases?.items?.slice(0, 8) ?? [],
     };
-  } catch {
+  } catch (err) {
+    console.error("Error fetching steam featured:", err);
     return empty;
   }
 }
@@ -355,37 +368,51 @@ export async function getGameMeta({ data }: { data: any }): Promise<GameMeta> {
 
   try {
     const [reviewsRes, priceRes] = await Promise.all([
-      fetch(`/api/steam?appid=${appid}`),
-      fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en&filters=price_overview`)}`)
+      fetch(`/api/steam?appid=${appid}`).catch(() => ({ ok: false, json: async () => null, headers: new Headers() })),
+      fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en&filters=price_overview`)}`).catch(() => ({ ok: false, json: async () => null }))
     ]);
 
-    if (reviewsRes.ok) {
-      const revData = await reviewsRes.json();
-      if (revData?.query_summary) {
-        meta.review_score_desc = revData.query_summary.review_score_desc;
-        meta.total_reviews = revData.query_summary.total_reviews;
-        if (meta.total_reviews > 0) {
-          meta.positive_percent = Math.round((revData.query_summary.total_positive / meta.total_reviews) * 100);
-        }
+    let revData = null;
+    if (reviewsRes.ok && (reviewsRes as any).headers?.get("content-type")?.includes("application/json")) {
+      revData = await (reviewsRes as any).json();
+    } else {
+      // Local dev fallback
+      const fallbackRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/appreviews/${appid}?json=1&language=all&num_per_page=20`)}`);
+      if (fallbackRes.ok) {
+        const fallbackJson = await fallbackRes.json();
+        if (fallbackJson.contents) revData = JSON.parse(fallbackJson.contents);
+      }
+    }
+
+    if (revData?.query_summary) {
+      meta.review_score_desc = revData.query_summary.review_score_desc;
+      meta.total_reviews = revData.query_summary.total_reviews;
+      if (meta.total_reviews > 0) {
+        meta.positive_percent = Math.round((revData.query_summary.total_positive / meta.total_reviews) * 100);
       }
     }
 
     if (priceRes.ok) {
-      const priceJson = JSON.parse((await priceRes.json()).contents);
-      const entry = priceJson[String(appid)];
-      if (entry?.success && entry.data?.price_overview) {
-        const po = entry.data.price_overview;
-        meta.price = {
-          final: po.final_formatted,
-          original: po.initial !== po.final ? po.initial_formatted : null,
-          discount_percent: po.discount_percent,
-          is_free: false
-        };
-      } else if (entry?.success && entry.data?.is_free) {
-        meta.price = { final: "Free", original: null, discount_percent: 0, is_free: true };
+      const priceJsonData = await (priceRes as any).json();
+      if (priceJsonData?.contents) {
+        const priceJson = JSON.parse(priceJsonData.contents);
+        const entry = priceJson[String(appid)];
+        if (entry?.success && entry.data?.price_overview) {
+          const po = entry.data.price_overview;
+          meta.price = {
+            final: po.final_formatted,
+            original: po.initial !== po.final ? po.initial_formatted : null,
+            discount_percent: po.discount_percent,
+            is_free: false
+          };
+        } else if (entry?.success && entry.data?.is_free) {
+          meta.price = { final: "Free", original: null, discount_percent: 0, is_free: true };
+        }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error("Error fetching game meta:", err);
+  }
 
   return meta;
 }
@@ -415,11 +442,21 @@ export async function getSteamReviews({ data }: { data: any }): Promise<SteamRev
   if (!appid) return empty;
 
   try {
-    const res = await fetch(`/api/steam?appid=${appid}`);
-    if (!res.ok) return empty;
-    const json = await res.json();
+    let revData = null;
+    const res = await fetch(`/api/steam?appid=${appid}`).catch(() => ({ ok: false, json: async () => null, headers: new Headers() }));
     
-    const summary = json.query_summary;
+    if (res.ok && (res as any).headers?.get("content-type")?.includes("application/json")) {
+      revData = await (res as any).json();
+    } else {
+      // Local dev fallback
+      const fallbackRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/appreviews/${appid}?json=1&language=all&num_per_page=20`)}`);
+      if (fallbackRes.ok) {
+        const fallbackJson = await fallbackRes.json();
+        if (fallbackJson.contents) revData = JSON.parse(fallbackJson.contents);
+      }
+    }
+    
+    const summary = revData?.query_summary;
     if (!summary) return empty;
 
     let positive_percent = 0;
@@ -436,9 +473,10 @@ export async function getSteamReviews({ data }: { data: any }): Promise<SteamRev
       total_negative: summary.total_negative,
       total_reviews: summary.total_reviews,
       positive_percent,
-      reviews: json.reviews || [],
+      reviews: revData.reviews || [],
     };
-  } catch {
+  } catch (err) {
+    console.error("Error fetching steam reviews:", err);
     return empty;
   }
 }
