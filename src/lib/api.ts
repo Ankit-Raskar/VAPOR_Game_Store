@@ -318,10 +318,9 @@ export interface SteamFeaturedItem {
 export async function steamFeatured() {
   const empty = { specials: [], topSellers: [], newReleases: [] };
   try {
-    const url = `https://api.allorigins.win/get?url=${encodeURIComponent(`${STEAM_STORE_BASE}/featuredcategories?cc=us&l=en`)}`;
-    const res = await fetch(url);
+    const res = await fetch("/api/steam?offers=true");
     if (!res.ok) return empty;
-    const json = JSON.parse((await res.json()).contents);
+    const json = await res.json();
     return {
       specials: json.specials?.items?.slice(0, 8) ?? [],
       topSellers: json.top_sellers?.items?.slice(0, 8) ?? [],
@@ -375,5 +374,38 @@ export async function getSteamReviews({ data }: { data: any }): Promise<SteamRev
     appid: null, steamUrl: null, review_score: 0, review_score_desc: "No Steam reviews",
     total_positive: 0, total_negative: 0, total_reviews: 0, positive_percent: 0, reviews: []
   };
-  return empty;
+
+  const apiKey = getRawgKey();
+  if (!apiKey) return empty;
+  
+  const appid = await findSteamAppId(apiKey, data.slug);
+  if (!appid) return empty;
+
+  try {
+    const res = await fetch(`/api/steam?appid=${appid}`);
+    if (!res.ok) return empty;
+    const json = await res.json();
+    
+    const summary = json.query_summary;
+    if (!summary) return empty;
+
+    let positive_percent = 0;
+    if (summary.total_reviews > 0) {
+      positive_percent = Math.round((summary.total_positive / summary.total_reviews) * 100);
+    }
+
+    return {
+      appid,
+      steamUrl: `https://store.steampowered.com/app/${appid}`,
+      review_score: summary.review_score,
+      review_score_desc: summary.review_score_desc,
+      total_positive: summary.total_positive,
+      total_negative: summary.total_negative,
+      total_reviews: summary.total_reviews,
+      positive_percent,
+      reviews: json.reviews || [],
+    };
+  } catch {
+    return empty;
+  }
 }
