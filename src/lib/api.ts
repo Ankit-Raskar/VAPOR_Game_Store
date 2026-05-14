@@ -347,14 +347,47 @@ export async function getGameMeta({ data }: { data: any }): Promise<GameMeta> {
   const empty: GameMeta = { appid: null, review_score_desc: "", positive_percent: 0, total_reviews: 0, price: null };
   const apiKey = getRawgKey();
   if (!apiKey) return empty;
-  let stores;
-  try { stores = await rawgFetch<any>(apiKey, `/games/${encodeURIComponent(data.slug)}/stores`); } catch { return empty; }
-  const steam = stores.results?.find((s: any) => /store\.steampowered\.com\/app\/(\d+)/.test(s.url));
-  if (!steam) return empty;
-  const m = steam.url.match(/\/app\/(\d+)/);
-  if (!m) return empty;
-  const appid = Number(m[1]);
-  return { ...empty, appid };
+  
+  const appid = await findSteamAppId(apiKey, data.slug);
+  if (!appid) return empty;
+
+  const meta: GameMeta = { ...empty, appid };
+
+  try {
+    const [reviewsRes, priceRes] = await Promise.all([
+      fetch(`/api/steam?appid=${appid}`),
+      fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en&filters=price_overview`)}`)
+    ]);
+
+    if (reviewsRes.ok) {
+      const revData = await reviewsRes.json();
+      if (revData?.query_summary) {
+        meta.review_score_desc = revData.query_summary.review_score_desc;
+        meta.total_reviews = revData.query_summary.total_reviews;
+        if (meta.total_reviews > 0) {
+          meta.positive_percent = Math.round((revData.query_summary.total_positive / meta.total_reviews) * 100);
+        }
+      }
+    }
+
+    if (priceRes.ok) {
+      const priceJson = JSON.parse((await priceRes.json()).contents);
+      const entry = priceJson[String(appid)];
+      if (entry?.success && entry.data?.price_overview) {
+        const po = entry.data.price_overview;
+        meta.price = {
+          final: po.final_formatted,
+          original: po.initial !== po.final ? po.initial_formatted : null,
+          discount_percent: po.discount_percent,
+          is_free: false
+        };
+      } else if (entry?.success && entry.data?.is_free) {
+        meta.price = { final: "Free", original: null, discount_percent: 0, is_free: true };
+      }
+    }
+  } catch {}
+
+  return meta;
 }
 
 export interface SteamReviewSummary {
