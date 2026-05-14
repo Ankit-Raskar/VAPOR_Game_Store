@@ -53,17 +53,32 @@ function StorePage() {
   useEffect(() => {
     let mounted = true;
     
-    trendingGames({ data: { page_size: 40 } }).then(data => {
-      if (mounted) { setTrendingData(data); setIsLoadingTrending(false); }
-    });
+    trendingGames({ data: { page_size: 40 } })
+      .then(data => {
+        if (mounted) { setTrendingData(data); setIsLoadingTrending(false); }
+      })
+      .catch(err => {
+        console.error("Failed to load trending:", err);
+        if (mounted) { setTrendingData(null); setIsLoadingTrending(false); }
+      });
     
-    upcomingGames({ data: { page_size: 40 } }).then(data => {
-      if (mounted) { setUpcomingData(data); setIsLoadingUpcoming(false); }
-    });
+    upcomingGames({ data: { page_size: 40 } })
+      .then(data => {
+        if (mounted) { setUpcomingData(data); setIsLoadingUpcoming(false); }
+      })
+      .catch(err => {
+        console.error("Failed to load upcoming:", err);
+        if (mounted) { setUpcomingData(null); setIsLoadingUpcoming(false); }
+      });
     
-    newlyReleasedGames({ data: { page_size: 40 } }).then(data => {
-      if (mounted) { setNewlyReleasedData(data); setIsLoadingNewlyReleased(false); }
-    });
+    newlyReleasedGames({ data: { page_size: 40 } })
+      .then(data => {
+        if (mounted) { setNewlyReleasedData(data); setIsLoadingNewlyReleased(false); }
+      })
+      .catch(err => {
+        console.error("Failed to load newly released:", err);
+        if (mounted) { setNewlyReleasedData(null); setIsLoadingNewlyReleased(false); }
+      });
 
     return () => { mounted = false; };
   }, []);
