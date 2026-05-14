@@ -369,18 +369,19 @@ export async function getGameMeta({ data }: { data: any }): Promise<GameMeta> {
   try {
     const [reviewsRes, priceRes] = await Promise.all([
       fetch(`/api/steam?appid=${appid}`).catch(() => ({ ok: false, json: async () => null, headers: new Headers() })),
-      fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en&filters=price_overview`)}`).catch(() => ({ ok: false, json: async () => null }))
+      fetch(`/api/steam?appid=${appid}&type=price`).catch(() => ({ ok: false, json: async () => null, headers: new Headers() }))
     ]);
 
     let revData = null;
     if (reviewsRes.ok && (reviewsRes as any).headers?.get("content-type")?.includes("application/json")) {
       revData = await (reviewsRes as any).json();
     } else {
-      // Local dev fallback
       const fallbackRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/appreviews/${appid}?json=1&language=all&num_per_page=20`)}`);
       if (fallbackRes.ok) {
-        const fallbackJson = await fallbackRes.json();
-        if (fallbackJson.contents) revData = JSON.parse(fallbackJson.contents);
+        try {
+          const fallbackJson = await fallbackRes.json();
+          if (fallbackJson.contents) revData = JSON.parse(fallbackJson.contents);
+        } catch (e) {}
       }
     }
 
@@ -392,22 +393,31 @@ export async function getGameMeta({ data }: { data: any }): Promise<GameMeta> {
       }
     }
 
-    if (priceRes.ok) {
-      const priceJsonData = await (priceRes as any).json();
-      if (priceJsonData?.contents) {
-        const priceJson = JSON.parse(priceJsonData.contents);
-        const entry = priceJson[String(appid)];
-        if (entry?.success && entry.data?.price_overview) {
-          const po = entry.data.price_overview;
-          meta.price = {
-            final: po.final_formatted,
-            original: po.initial !== po.final ? po.initial_formatted : null,
-            discount_percent: po.discount_percent,
-            is_free: false
-          };
-        } else if (entry?.success && entry.data?.is_free) {
-          meta.price = { final: "Free", original: null, discount_percent: 0, is_free: true };
-        }
+    let priceData = null;
+    if (priceRes.ok && (priceRes as any).headers?.get("content-type")?.includes("application/json")) {
+      priceData = await (priceRes as any).json();
+    } else {
+      const fallbackRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en&filters=price_overview`)}`);
+      if (fallbackRes.ok) {
+        try {
+          const fallbackJson = await fallbackRes.json();
+          if (fallbackJson.contents) priceData = JSON.parse(fallbackJson.contents);
+        } catch (e) {}
+      }
+    }
+
+    if (priceData) {
+      const entry = priceData[String(appid)];
+      if (entry?.success && entry.data?.price_overview) {
+        const po = entry.data.price_overview;
+        meta.price = {
+          final: po.final_formatted,
+          original: po.initial !== po.final ? po.initial_formatted : null,
+          discount_percent: po.discount_percent,
+          is_free: false
+        };
+      } else if (entry?.success && entry.data?.is_free) {
+        meta.price = { final: "Free", original: null, discount_percent: 0, is_free: true };
       }
     }
   } catch (err) {
