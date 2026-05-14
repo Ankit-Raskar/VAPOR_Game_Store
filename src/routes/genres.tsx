@@ -1,14 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { listGenres } from "@/lib/games.functions";
+import { listGenres } from "@/lib/api";
 import { Tag } from "lucide-react";
 
 export const Route = createFileRoute("/genres")({ component: GenresPage });
 
 function GenresPage() {
-  const fn = useServerFn(listGenres);
-  const { data, isLoading } = useQuery({ queryKey: ["genres"], queryFn: () => fn() });
+    const { data, isLoading } = useQuery({ queryKey: ["genres"], queryFn: () => listGenres() });
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
@@ -31,7 +29,7 @@ function GenresPage() {
             <Link
               key={g.id}
               to="/library"
-              search={{ search: "", ordering: "-added", page: 1, genres: g.slug }}
+              search={{ search: "", ordering: "-added", page: 1, genres: g.slug, price: "any" }}
               className="group relative overflow-hidden rounded-xl border border-border bg-gradient-card shadow-card transition hover:-translate-y-1 hover:shadow-glow"
             >
               {g.image_background && (

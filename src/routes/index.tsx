@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { trendingGames, upcomingGames, newlyReleasedGames, steamFeatured, listGames, getGameMeta, getGameScreenshots, type GameSummary } from "@/lib/games.functions";
-import { addToLibrary } from "@/lib/library.functions";
+import { trendingGames, upcomingGames, newlyReleasedGames, steamFeatured, listGames, getGameMeta, getGameScreenshots, type GameSummary } from "@/lib/api";
+import { addToLibrary } from "@/lib/library";
 import { useAuth } from "@/hooks/use-auth";
 import { GameCard } from "@/components/GameCard";
 import { ChevronRight, Flame, Sparkles, Tag, Search, X, Rocket, ThumbsUp, ThumbsDown, Library } from "lucide-react";
@@ -42,32 +41,42 @@ export const Route = createFileRoute("/")({
 });
 
 function StorePage() {
-  const trendingFn = useServerFn(trendingGames);
-  const upcomingFn = useServerFn(upcomingGames);
-  const newlyReleasedFn = useServerFn(newlyReleasedGames);
-  const featuredFn = useServerFn(steamFeatured);
+        
+  const [trendingData, setTrendingData] = useState<any>(null);
+  const [upcomingData, setUpcomingData] = useState<any>(null);
+  const [newlyReleasedData, setNewlyReleasedData] = useState<any>(null);
 
-  const trending = useQuery({
-    queryKey: ["trending"],
-    queryFn: () => trendingFn({ data: { page_size: 40 } }),
-  });
-  const upcoming = useQuery({
-    queryKey: ["upcoming-home"],
-    queryFn: () => upcomingFn({ data: { page_size: 40 } }),
-  });
-  const newlyReleased = useQuery({
-    queryKey: ["newly-released-home"],
-    queryFn: () => newlyReleasedFn({ data: { page_size: 40 } }),
-  });
+  const [isLoadingTrending, setIsLoadingTrending] = useState(true);
+  const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(true);
+  const [isLoadingNewlyReleased, setIsLoadingNewlyReleased] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    trendingGames({ data: { page_size: 40 } }).then(data => {
+      if (mounted) { setTrendingData(data); setIsLoadingTrending(false); }
+    });
+    
+    upcomingGames({ data: { page_size: 40 } }).then(data => {
+      if (mounted) { setUpcomingData(data); setIsLoadingUpcoming(false); }
+    });
+    
+    newlyReleasedGames({ data: { page_size: 40 } }).then(data => {
+      if (mounted) { setNewlyReleasedData(data); setIsLoadingNewlyReleased(false); }
+    });
+
+    return () => { mounted = false; };
+  }, []);
+
   const featured = useQuery({
     queryKey: ["steam-featured"],
-    queryFn: () => featuredFn(),
+    queryFn: () => steamFeatured(),
     retry: 0,
   });
 
-  const trendingClean = (trending.data?.results ?? []).filter((g) => !!g.background_image && !!g.released);
-  const upcomingClean = (upcoming.data?.results ?? []).filter((g) => !!g.background_image && !!g.released);
-  const newlyReleasedClean = (newlyReleased.data?.results ?? []).filter((g) => !!g.background_image && !!g.released);
+  const trendingClean = (trendingData?.results ?? []).filter((g: any) => !!g.background_image && !!g.released);
+  const upcomingClean = (upcomingData?.results ?? []).filter((g: any) => !!g.background_image && !!g.released);
+  const newlyReleasedClean = (newlyReleasedData?.results ?? []).filter((g: any) => !!g.background_image && !!g.released);
 
   const heroes = trendingClean.slice(0, 5);
 
@@ -87,7 +96,7 @@ function StorePage() {
       {featured.data?.specials && featured.data.specials.length > 0 && (
         <Section title="Steam Special Offers" icon={<Tag className="h-5 w-5" />}>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {featured.data.specials.slice(0, 4).map((it) => (
+            {featured.data.specials.slice(0, 4).map((it: any) => (
               <Link
                 key={it.id}
                 to="/game/$slug"
@@ -125,13 +134,13 @@ function StorePage() {
       <Section
         title="Trending This Season"
         icon={<Flame className="h-5 w-5" />}
-        action={<Link to="/library" search={{ ordering: "-added", search: "", page: 1, genres: "" }} className="text-sm text-primary hover:underline">Browse all <ChevronRight className="inline h-3 w-3" /></Link>}
+        action={<Link to="/library" search={{ ordering: "-added", search: "", page: 1, genres: "", price: "any" }} className="text-sm text-primary hover:underline">Browse all <ChevronRight className="inline h-3 w-3" /></Link>}
       >
-        {trending.isLoading ? (
+        {isLoadingTrending ? (
           <SkeletonGrid />
         ) : trendingClean.length > 1 ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
-            {trendingClean.slice(1, 11).map((g, i) => (
+            {trendingClean.slice(1, 11).map((g: any, i: number) => (
               <GameCard key={g.id} game={g} index={i} />
             ))}
           </div>
@@ -144,13 +153,13 @@ function StorePage() {
       <Section
         title="Newly Released"
         icon={<Rocket className="h-5 w-5" />}
-        action={<Link to="/library" search={{ ordering: "-released", search: "", page: 1, genres: "" }} className="text-sm text-primary hover:underline">Browse all <ChevronRight className="inline h-3 w-3" /></Link>}
+        action={<Link to="/library" search={{ ordering: "-released", search: "", page: 1, genres: "", price: "any" }} className="text-sm text-primary hover:underline">Browse all <ChevronRight className="inline h-3 w-3" /></Link>}
       >
-        {newlyReleased.isLoading ? (
+        {isLoadingNewlyReleased ? (
           <SkeletonGrid />
         ) : newlyReleasedClean.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
-            {newlyReleasedClean.slice(0, 10).map((g, i) => (
+            {newlyReleasedClean.slice(0, 10).map((g: any, i: number) => (
               <GameCard key={g.id} game={g} index={i} />
             ))}
           </div>
@@ -165,11 +174,11 @@ function StorePage() {
         icon={<Sparkles className="h-5 w-5" />}
         action={<Link to="/upcoming" className="text-sm text-primary hover:underline">See all <ChevronRight className="inline h-3 w-3" /></Link>}
       >
-        {upcoming.isLoading ? (
+        {isLoadingUpcoming ? (
           <SkeletonGrid />
         ) : upcomingClean.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
-            {upcomingClean.slice(0, 10).map((g, i) => (
+            {upcomingClean.slice(0, 10).map((g: any, i: number) => (
               <GameCard key={g.id} game={g} index={i} />
             ))}
           </div>
@@ -221,10 +230,9 @@ function HeroCarousel({ games }: { games: GameSummary[] }) {
   }, [paused, count]);
 
   const current = games[index];
-  const metaFn = useServerFn(getGameMeta);
-  const { data: meta } = useQuery({
+    const { data: meta } = useQuery({
     queryKey: ["hero-meta", current.slug],
-    queryFn: () => metaFn({ data: { slug: current.slug } }),
+    queryFn: () => getGameMeta({ data: { slug: current.slug } }),
     staleTime: 1000 * 60 * 30,
     retry: 0,
   });
@@ -360,8 +368,7 @@ type SteamTabId = "trending" | "top" | "upcoming" | "new";
 function SteamTabbedList() {
   const [tab, setTab] = useState<SteamTabId>("trending");
   const [visible, setVisible] = useState(10);
-  const listFn = useServerFn(listGames);
-  const tabs = steamTabsConfig();
+    const tabs = steamTabsConfig();
   const active = tabs.find((t) => t.id === tab)!;
 
   // Reset visible count when the tab changes
@@ -372,7 +379,7 @@ function SteamTabbedList() {
   const { data, isLoading } = useQuery({
     queryKey: ["steam-list", tab],
     queryFn: () =>
-      listFn({
+      listGames({
         data: {
           page: 1,
           page_size: 40,
@@ -451,7 +458,7 @@ function SteamTabbedList() {
   );
 }
 
-function SteamFeaturedRow({ item: it }: { item: import("@/lib/games.functions").SteamFeaturedItem }) {
+function SteamFeaturedRow({ item: it }: { item: import("@/lib/api").SteamFeaturedItem }) {
   return (
     <Link
       to="/game/$slug"
@@ -579,17 +586,15 @@ function SteamRow({ game: g }: { game: GameSummary }) {
 }
 
 function SteamHoverCard({ game: g, top, left }: { game: GameSummary; top: number; left: number }) {
-  const screensFn = useServerFn(getGameScreenshots);
-  const metaFn = useServerFn(getGameMeta);
-  const { data: screens } = useQuery({
+      const { data: screens } = useQuery({
     queryKey: ["hover-screens", g.slug],
-    queryFn: () => screensFn({ data: { slug: g.slug } }),
+    queryFn: () => getGameScreenshots({ data: { slug: g.slug } }),
     staleTime: 1000 * 60 * 30,
     retry: 0,
   });
   const { data: meta } = useQuery({
     queryKey: ["hover-meta", g.slug],
-    queryFn: () => metaFn({ data: { slug: g.slug } }),
+    queryFn: () => getGameMeta({ data: { slug: g.slug } }),
     staleTime: 1000 * 60 * 30,
     retry: 0,
   });
@@ -704,8 +709,7 @@ function HomeSearch() {
   const [debounced, setDebounced] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const listFn = useServerFn(listGames);
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
   const submitSearch = () => {
     const term = q.trim();
@@ -713,7 +717,7 @@ function HomeSearch() {
     setOpen(false);
     navigate({
       to: "/library",
-      search: { search: term, ordering: "-added", page: 1, genres: "" },
+      search: { search: term, ordering: "-added", page: 1, genres: "", price: "any" },
     });
   };
 
@@ -732,7 +736,7 @@ function HomeSearch() {
 
   const { data, isFetching } = useQuery({
     queryKey: ["home-search", debounced],
-    queryFn: () => listFn({ data: { search: debounced, page: 1, page_size: 6 } }),
+    queryFn: () => listGames({ data: { search: debounced, page: 1, page_size: 6 } }),
     enabled: debounced.length >= 2,
     staleTime: 30_000,
   });
@@ -806,14 +810,13 @@ function HomeSearch() {
 // Steam-style "More like this" infinite scrolling recommendations
 // =====================================================================
 function RecommendedInfinite({ seed }: { seed: string }) {
-  const listFn = useServerFn(listGames);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+    const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
       queryKey: ["recommended-infinite"],
       queryFn: ({ pageParam }) =>
-        listFn({
+        listGames({
           data: {
             page: pageParam as number,
             page_size: 10,
@@ -888,23 +891,21 @@ function RecommendedInfinite({ seed }: { seed: string }) {
 }
 
 function RecommendationCard({ game: g, reason }: { game: GameSummary; reason: string }) {
-  const screensFn = useServerFn(getGameScreenshots);
-  const addFn = useServerFn(addToLibrary);
-  const navigate = useNavigate();
+      const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
   const [hidden, setHidden] = useState(false);
   const price = priceFor(g);
   const { data: screens } = useQuery({
     queryKey: ["rec-screens", g.slug],
-    queryFn: () => screensFn({ data: { slug: g.slug } }),
+    queryFn: () => getGameScreenshots({ data: { slug: g.slug } }),
     staleTime: 30 * 60_000,
     retry: 0,
   });
 
   const wishlist = useMutation({
     mutationFn: () =>
-      addFn({
+      addToLibrary({
         data: {
           game_slug: g.slug,
           game_id: g.id,
@@ -1003,7 +1004,7 @@ function RecommendationCard({ game: g, reason }: { game: GameSummary; reason: st
             onClick={() =>
               navigate({
                 to: "/library",
-                search: { search: "", ordering: "-rating", page: 1, genres: findSimilarGenre },
+                search: { search: "", ordering: "-rating", page: 1, genres: findSimilarGenre, price: "any" },
               })
             }
             className="rounded bg-surface-elevated px-4 py-2 text-xs font-medium text-primary transition hover:bg-primary hover:text-primary-foreground"

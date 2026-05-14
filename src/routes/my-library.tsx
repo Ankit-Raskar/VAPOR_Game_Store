@@ -1,8 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
-import { getMyLibrary, removeFromLibrary } from "@/lib/library.functions";
+import { getMyLibrary, removeFromLibrary } from "@/lib/library";
 import { useAuth } from "@/hooks/use-auth";
 import { Library, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -13,21 +12,19 @@ function MyLibraryPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const getFn = useServerFn(getMyLibrary);
-  const removeFn = useServerFn(removeFromLibrary);
-
+    
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["my-library"],
-    queryFn: () => getFn(),
+    queryFn: () => getMyLibrary(),
     enabled: !!user,
   });
 
   const remove = useMutation({
-    mutationFn: (slug: string) => removeFn({ data: { game_slug: slug } }),
+    mutationFn: (slug: string) => removeFromLibrary({ data: { game_slug: slug } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-library"] });
       toast.success("Removed from library");

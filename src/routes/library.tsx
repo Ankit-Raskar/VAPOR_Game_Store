@@ -1,9 +1,8 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueries, useInfiniteQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo } from "react";
 import { z } from "zod";
-import { listGames, listGenres, getGameMeta, type GameSummary } from "@/lib/games.functions";
+import { listGames, listGenres, getGameMeta, type GameSummary } from "@/lib/api";
 import { GameCard } from "@/components/GameCard";
 import { Search, X } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -79,13 +78,12 @@ function LibraryPage() {
 
   const priceActive = !!(price && price !== "any");
 
-  const listFn = useServerFn(listGames);
-
+  
   // No price filter: server pagination, fixed PAGE_SIZE per page.
   const plainQuery = useQuery({
     queryKey: ["games", { search, ordering, page, genres }],
     queryFn: () =>
-      listFn({
+      listGames({
         data: { search: search || undefined, ordering, page, page_size: PAGE_SIZE, genres: genres || undefined },
       }),
     placeholderData: (prev) => prev,
@@ -96,7 +94,7 @@ function LibraryPage() {
   const infinite = useInfiniteQuery({
     queryKey: ["games-infinite", { search, ordering, genres }],
     queryFn: ({ pageParam }) =>
-      listFn({
+      listGames({
         data: {
           search: search || undefined,
           ordering,
@@ -115,12 +113,11 @@ function LibraryPage() {
     [infinite.data],
   );
 
-  const metaFn = useServerFn(getGameMeta);
-  const metaQueries = useQueries({
+    const metaQueries = useQueries({
     queries: priceActive
       ? allFetched.map((g) => ({
           queryKey: ["game-meta", g.slug],
-          queryFn: () => metaFn({ data: { slug: g.slug } }),
+          queryFn: () => getGameMeta({ data: { slug: g.slug } }),
           staleTime: 1000 * 60 * 30,
           retry: 0,
         }))
@@ -287,8 +284,7 @@ function LibraryPage() {
 }
 
 function GenreSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const fn = useServerFn(listGenres);
-  const { data } = useQuery({ queryKey: ["genres"], queryFn: () => fn() });
+    const { data } = useQuery({ queryKey: ["genres"], queryFn: () => listGenres() });
   return (
     <select
       value={value}

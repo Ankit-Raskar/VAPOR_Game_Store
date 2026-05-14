@@ -1,8 +1,7 @@
 import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { getGame, getGameScreenshots, getGameTrailers, findYoutubeTrailer, getSystemRequirements, getDeveloperGames, getSimilarGames, type GameSummary } from "@/lib/games.functions";
-import { addToLibrary, removeFromLibrary, isInLibrary } from "@/lib/library.functions";
+import { getGame, getGameScreenshots, getGameTrailers, findYoutubeTrailer, getSystemRequirements, getDeveloperGames, getSimilarGames, type GameSummary } from "@/lib/api";
+import { addToLibrary, removeFromLibrary, isInLibrary } from "@/lib/library";
 import { SteamReviews } from "@/components/SteamReviews";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Calendar, Check, Clock, Loader2, Plus, Star, X, ChevronLeft, ChevronRight, Youtube } from "lucide-react";
@@ -27,7 +26,7 @@ export const Route = createFileRoute("/game/$slug")({
           </button>
           <Link
             to="/library"
-            search={{ search: pretty, ordering: "-added", page: 1 }}
+            search={{ search: pretty, ordering: "-added", page: 1, genres: "", price: "any" }}
             className="rounded-md border border-border bg-surface px-4 py-2 text-sm hover:border-primary"
           >
             Search "{pretty}" in library
@@ -39,7 +38,7 @@ export const Route = createFileRoute("/game/$slug")({
   notFoundComponent: () => (
     <div className="mx-auto max-w-2xl px-6 py-16 text-center">
       <h1 className="text-2xl font-bold">Game not found</h1>
-      <Link to="/library" className="mt-4 inline-block text-primary hover:underline">Back to library</Link>
+      <Link to="/library" search={{ search: "", ordering: "-added", page: 1, genres: "", price: "any" }} className="mt-4 inline-block text-primary hover:underline">Back to library</Link>
     </div>
   ),
 });
@@ -48,53 +47,46 @@ function GamePage() {
   const { slug } = Route.useParams();
   const router = useRouter();
   const navigate = useNavigate();
-  const gameFn = useServerFn(getGame);
-  const shotsFn = useServerFn(getGameScreenshots);
-  const trailersFn = useServerFn(getGameTrailers);
-
+      
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", slug],
-    queryFn: () => gameFn({ data: { slug } }),
+    queryFn: () => getGame({ data: { slug } }),
   });
   const { data: shots } = useQuery({
     queryKey: ["screenshots", slug],
-    queryFn: () => shotsFn({ data: { slug } }),
+    queryFn: () => getGameScreenshots({ data: { slug } }),
   });
   const { data: trailers } = useQuery({
     queryKey: ["trailers", slug],
-    queryFn: () => trailersFn({ data: { slug } }),
+    queryFn: () => getGameTrailers({ data: { slug } }),
   });
   const trailer = trailers?.results?.[0];
 
-  const sysReqFn = useServerFn(getSystemRequirements);
-  const { data: sysReq } = useQuery({
+    const { data: sysReq } = useQuery({
     queryKey: ["sysreq", slug],
-    queryFn: () => sysReqFn({ data: { slug } }),
+    queryFn: () => getSystemRequirements({ data: { slug } }),
     staleTime: 60 * 60_000,
   });
 
-  const devGamesFn = useServerFn(getDeveloperGames);
-  const primaryDevId = game?.developers?.[0]?.id;
+    const primaryDevId = game?.developers?.[0]?.id;
   const primaryDevName = game?.developers?.[0]?.name;
   const { data: devGames } = useQuery({
     queryKey: ["dev-games", primaryDevId, slug],
-    queryFn: () => devGamesFn({ data: { developer: primaryDevId!, exclude_slug: slug } }),
+    queryFn: () => getDeveloperGames({ data: { developer: primaryDevId!, exclude_slug: slug } }),
     enabled: !!primaryDevId,
     staleTime: 30 * 60_000,
   });
 
-  const similarFn = useServerFn(getSimilarGames);
-  const { data: similar } = useQuery({
+    const { data: similar } = useQuery({
     queryKey: ["similar-games", slug],
-    queryFn: () => similarFn({ data: { slug } }),
+    queryFn: () => getSimilarGames({ data: { slug } }),
     staleTime: 30 * 60_000,
   });
 
-  const ytFn = useServerFn(findYoutubeTrailer);
-  const [showYt, setShowYt] = useState(false);
+    const [showYt, setShowYt] = useState(false);
   const { data: ytData, isFetching: ytLoading } = useQuery({
     queryKey: ["yt-trailer", slug],
-    queryFn: () => ytFn({ data: { query: `${game?.name ?? slug} official trailer` } }),
+    queryFn: () => findYoutubeTrailer({ data: { query: `${game?.name ?? slug} official trailer` } }),
     enabled: showYt && !!game?.name && !trailer,
     staleTime: 60 * 60_000,
   });
@@ -568,19 +560,16 @@ function LibraryButton({ game }: { game: { slug: string; id: number; name: strin
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const checkFn = useServerFn(isInLibrary);
-  const addFn = useServerFn(addToLibrary);
-  const removeFn = useServerFn(removeFromLibrary);
-
+      
   const { data: status } = useQuery({
     queryKey: ["in-library", game.slug, user?.id],
-    queryFn: () => checkFn({ data: { slug: game.slug } }),
+    queryFn: () => isInLibrary({ data: { slug: game.slug } }),
     enabled: !!user,
   });
   const inLib = status?.inLibrary;
 
   const add = useMutation({
-    mutationFn: () => addFn({ data: { game_slug: game.slug, game_id: game.id, game_name: game.name, game_image: game.background_image ?? undefined } }),
+    mutationFn: () => addToLibrary({ data: { game_slug: game.slug, game_id: game.id, game_name: game.name, game_image: game.background_image ?? undefined } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["in-library", game.slug] });
       qc.invalidateQueries({ queryKey: ["my-library"] });
@@ -589,7 +578,7 @@ function LibraryButton({ game }: { game: { slug: string; id: number; name: strin
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to add"),
   });
   const remove = useMutation({
-    mutationFn: () => removeFn({ data: { game_slug: game.slug } }),
+    mutationFn: () => removeFromLibrary({ data: { game_slug: game.slug } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["in-library", game.slug] });
       qc.invalidateQueries({ queryKey: ["my-library"] });

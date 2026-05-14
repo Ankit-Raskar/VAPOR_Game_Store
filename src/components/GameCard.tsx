@@ -1,9 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useRef, useState } from "react";
-import type { GameSummary } from "@/lib/games.functions";
-import { getGameMeta, getGame } from "@/lib/games.functions";
+import type { GameSummary } from "@/lib/api";
+import { getGameMeta, getGame } from "@/lib/api";
 import { ThumbsUp, ThumbsDown, Calendar, Gamepad2 } from "lucide-react";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
@@ -19,22 +18,20 @@ function reviewClass(desc: string) {
 }
 
 export function GameCard({ game, index = 0 }: { game: GameSummary; index?: number }) {
-  const metaFn = useServerFn(getGameMeta);
-  const gameFn = useServerFn(getGame);
-  const queryClient = useQueryClient();
+      const queryClient = useQueryClient();
   const prefetchedRef = useRef(false);
   const [open, setOpen] = useState(false);
 
   const { data: meta } = useQuery({
     queryKey: ["game-meta", game.slug],
-    queryFn: () => metaFn({ data: { slug: game.slug } }),
+    queryFn: () => getGameMeta({ data: { slug: game.slug } }),
     staleTime: 1000 * 60 * 30,
     retry: 0,
   });
 
   const { data: detail } = useQuery({
     queryKey: ["game", game.slug],
-    queryFn: () => gameFn({ data: { slug: game.slug } }),
+    queryFn: () => getGame({ data: { slug: game.slug } }),
     staleTime: 1000 * 60 * 10,
     enabled: open,
     retry: 0,
@@ -48,10 +45,10 @@ export function GameCard({ game, index = 0 }: { game: GameSummary; index?: numbe
     prefetchedRef.current = true;
     queryClient.prefetchQuery({
       queryKey: ["game", game.slug],
-      queryFn: () => gameFn({ data: { slug: game.slug } }),
+      queryFn: () => getGame({ data: { slug: game.slug } }),
       staleTime: 1000 * 60 * 10,
     });
-  }, [queryClient, gameFn, game.slug]);
+  }, [queryClient, getGame, game.slug]);
 
   const hasReview = meta?.review_score_desc && meta.total_reviews > 0;
   const isPositive = hasReview && POSITIVE.test(meta.review_score_desc);

@@ -1,7 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { upcomingGames } from "@/lib/games.functions";
+import { upcomingGames } from "@/lib/api";
 import { GameCard } from "@/components/GameCard";
 import { CalendarClock } from "lucide-react";
 
@@ -23,10 +22,9 @@ export const Route = createFileRoute("/upcoming")({
 });
 
 function UpcomingPage() {
-  const fn = useServerFn(upcomingGames);
-  const { data, isLoading } = useQuery({
+    const { data, isLoading } = useQuery({
     queryKey: ["upcoming-page"],
-    queryFn: () => fn({ data: { page_size: 30 } }),
+    queryFn: () => upcomingGames({ data: { page_size: 30 } }),
   });
 
   // Group by month

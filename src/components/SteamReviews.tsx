@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { getSteamReviews } from "@/lib/games.functions";
+import { getSteamReviews } from "@/lib/api";
 import { ThumbsUp, ThumbsDown, ExternalLink, Clock, MessageSquare } from "lucide-react";
 
 const SCORE_COLOR: Record<string, string> = {
@@ -31,10 +30,9 @@ export function SteamReviews({
   slug: string;
   variant?: "full" | "summary" | "recent";
 }) {
-  const fn = useServerFn(getSteamReviews);
-  const { data, isLoading } = useQuery({
+    const { data, isLoading } = useQuery({
     queryKey: ["steam-reviews", slug],
-    queryFn: () => fn({ data: { slug } }),
+    queryFn: () => getSteamReviews({ data: { slug } }),
   });
 
   if (isLoading) {

@@ -1,11 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+
 import { useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { listGames, getGameScreenshots, trendingGames, type GameSummary } from "@/lib/games.functions";
-import { addToLibrary } from "@/lib/library.functions";
+import { listGames, getGameScreenshots, trendingGames, type GameSummary } from "@/lib/api";
+import { addToLibrary } from "@/lib/library";
 import { useAuth } from "@/hooks/use-auth";
 
 function isoDay(offsetDays: number) {
@@ -25,10 +25,9 @@ function priceFor(g: GameSummary): { final: number; original: number | null; dis
 }
 
 export function RecommendedInfiniteHome() {
-  const trendingFn = useServerFn(trendingGames);
   const trending = useQuery({
     queryKey: ["trending"],
-    queryFn: () => trendingFn({ data: { page_size: 40 } }),
+    queryFn: () => trendingGames({ data: { page_size: 40 } }),
   });
   const seed =
     (trending.data?.results ?? []).find((g) => !!g.background_image && !!g.released)?.name ??
@@ -41,14 +40,13 @@ export function RecommendedInfiniteHome() {
 }
 
 export function RecommendedInfinite({ seed }: { seed: string }) {
-  const listFn = useServerFn(listGames);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
       queryKey: ["recommended-infinite"],
       queryFn: ({ pageParam }) =>
-        listFn({
+        listGames({
           data: {
             page: pageParam as number,
             page_size: 10,
@@ -133,15 +131,13 @@ export function RecommendedInfinite({ seed }: { seed: string }) {
 }
 
 function RecommendationCard({ game: g, reason, onIgnore }: { game: GameSummary; reason: string; onIgnore: () => void }) {
-  const screensFn = useServerFn(getGameScreenshots);
-  const addFn = useServerFn(addToLibrary);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
   const price = priceFor(g);
   const { data: screens } = useQuery({
     queryKey: ["rec-screens", g.slug],
-    queryFn: () => screensFn({ data: { slug: g.slug } }),
+    queryFn: () => getGameScreenshots({ data: { slug: g.slug } }),
     staleTime: 30 * 60_000,
     retry: 0,
   });
@@ -149,7 +145,7 @@ function RecommendationCard({ game: g, reason, onIgnore }: { game: GameSummary; 
 
   const wishlist = useMutation({
     mutationFn: () =>
-      addFn({
+      addToLibrary({
         data: {
           game_slug: g.slug,
           game_id: g.id,
@@ -243,7 +239,7 @@ function RecommendationCard({ game: g, reason, onIgnore }: { game: GameSummary; 
             onClick={() =>
               navigate({
                 to: "/library",
-                search: { search: "", ordering: "-rating", page: 1, genres: findSimilarGenre },
+                search: { search: "", ordering: "-rating", page: 1, genres: findSimilarGenre, price: "any" },
               })
             }
             className="rounded bg-surface-elevated px-4 py-2 text-xs font-medium text-primary transition hover:bg-primary hover:text-primary-foreground"
