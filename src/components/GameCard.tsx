@@ -135,15 +135,15 @@ export function GameCard({ game, index = 0 }: { game: GameSummary; index?: numbe
                   aria-label="Loading reviews"
                   className="h-4 w-24 animate-pulse rounded bg-surface-elevated motion-reduce:animate-none"
                 />
-              ) : hasReview ? (
+              ) : meta.appid ? (
                 <span
                   className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${reviewClass(
-                    meta.review_score_desc,
+                    meta.review_score_desc || "No reviews",
                   )}`}
                 >
                   {isPositive && <ThumbsUp className="h-2.5 w-2.5" aria-hidden="true" />}
                   {isNegative && <ThumbsDown className="h-2.5 w-2.5" aria-hidden="true" />}
-                  <span className="truncate">{meta.review_score_desc}</span>
+                  <span className="truncate">{meta.review_score_desc || "No reviews"}</span>
                 </span>
               ) : (
                 <span />
