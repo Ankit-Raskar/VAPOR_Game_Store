@@ -13,7 +13,7 @@ export default async function handler(req, res) {
         `https://steam2.p.rapidapi.com/appReviews/${appid}/limit/20/*`,
         {
           headers: {
-            "X-RapidAPI-Key": process.env.STEAM_API_KEY,
+            "X-RapidAPI-Key": process.env.STEAM_API_KEY || "a7c8d6b50bmsha7ff17013912dadp14edd6jsnb207187ecff6",
             "X-RapidAPI-Host": "steam2.p.rapidapi.com",
           },
         }
