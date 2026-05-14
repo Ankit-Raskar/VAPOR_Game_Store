@@ -76,15 +76,16 @@ function LibraryPage() {
     return () => clearTimeout(t);
   }, [query, search, navigate]);
 
-  const priceActive = !!(price && price !== "any");
+  const priceActive = !!(price && price !== "any" && price !== "free");
+  const isFree = price === "free";
 
   
-  // No price filter: server pagination, fixed PAGE_SIZE per page.
+  // No price filter (or "free" which uses tags): server pagination, fixed PAGE_SIZE per page.
   const plainQuery = useQuery({
-    queryKey: ["games", { search, ordering, page, genres }],
+    queryKey: ["games", { search, ordering, page, genres, isFree }],
     queryFn: () =>
       listGames({
-        data: { search: search || undefined, ordering, page, page_size: PAGE_SIZE, genres: genres || undefined },
+        data: { search: search || undefined, ordering, page, page_size: PAGE_SIZE, genres: genres || undefined, tags: isFree ? "free-to-play" : undefined },
       }),
     placeholderData: (prev) => prev,
     enabled: !priceActive,
@@ -144,19 +145,21 @@ function LibraryPage() {
     return out;
   }, [priceActive, price, allFetched, metaQueries]);
 
-  // Auto-fetch more pages until we have enough filtered results for the current page.
+  // Auto-fetch more pages until we have enough filtered results for the current page, up to a max of 3 pages.
   useEffect(() => {
     if (!priceActive) return;
     if (!allMetaSettled) return;
     if (filtered.length >= page * PAGE_SIZE) return;
-    if (infinite.hasNextPage && !infinite.isFetchingNextPage) {
+    const pagesFetched = infinite.data?.pages.length ?? 0;
+    if (infinite.hasNextPage && !infinite.isFetchingNextPage && pagesFetched < 3) {
       infinite.fetchNextPage();
     }
   }, [priceActive, allMetaSettled, filtered.length, page, infinite]);
 
+  const pagesFetched = infinite.data?.pages.length ?? 0;
   const isLoading = priceActive
     ? infinite.isLoading ||
-      (filtered.length < page * PAGE_SIZE && (infinite.hasNextPage || !allMetaSettled))
+      (filtered.length < page * PAGE_SIZE && (infinite.hasNextPage || !allMetaSettled) && pagesFetched < 3)
     : plainQuery.isLoading;
   const isFetching = priceActive ? infinite.isFetching : plainQuery.isFetching;
   const totalCount = priceActive ? undefined : plainQuery.data?.count;

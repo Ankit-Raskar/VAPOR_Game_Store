@@ -77,6 +77,7 @@ export async function listGames({ data }: { data: any }): Promise<RawgListRespon
   if (data.search) params.search = data.search;
   if (data.ordering) params.ordering = data.ordering;
   if (data.genres) params.genres = data.genres;
+  if (data.tags) params.tags = data.tags;
   if (data.dates) {
     params.dates = data.dates;
   } else if (data.ordering === "-released") {
