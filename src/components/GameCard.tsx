@@ -110,43 +110,43 @@ export function GameCard({ game, index = 0 }: { game: GameSummary; index?: numbe
               <span className="text-muted-foreground">
                 {game.released ? new Date(game.released).getFullYear() : "TBA"}
               </span>
-              {meta?.price ? (
+              {meta === undefined ? (
+                <span
+                  role="status"
+                  aria-label="Loading price"
+                  className="h-3 w-10 animate-pulse rounded bg-surface-elevated motion-reduce:animate-none"
+                />
+              ) : meta.price ? (
                 <div className="flex items-center gap-1.5">
                   {meta.price.original && (
                     <span className="text-muted-foreground line-through">{meta.price.original}</span>
                   )}
                   <span className="font-semibold text-foreground">{meta.price.final}</span>
                 </div>
-              ) : meta && meta.appid === null ? (
-                <span className="text-muted-foreground" aria-hidden="true">—</span>
               ) : (
-                <span
-                  role="status"
-                  aria-label="Loading price"
-                  className="h-3 w-10 animate-pulse rounded bg-surface-elevated motion-reduce:animate-none"
-                />
+                <span className="text-muted-foreground" aria-hidden="true">—</span>
               )}
             </div>
 
             <div className="flex items-center justify-between gap-2">
-              {hasReview ? (
-                <span
-                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${reviewClass(
-                    meta!.review_score_desc,
-                  )}`}
-                >
-                  {isPositive && <ThumbsUp className="h-2.5 w-2.5" aria-hidden="true" />}
-                  {isNegative && <ThumbsDown className="h-2.5 w-2.5" aria-hidden="true" />}
-                  <span className="truncate">{meta!.review_score_desc}</span>
-                </span>
-              ) : meta && !meta.appid ? (
-                <span />
-              ) : (
+              {meta === undefined ? (
                 <span
                   role="status"
                   aria-label="Loading reviews"
                   className="h-4 w-24 animate-pulse rounded bg-surface-elevated motion-reduce:animate-none"
                 />
+              ) : hasReview ? (
+                <span
+                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${reviewClass(
+                    meta.review_score_desc,
+                  )}`}
+                >
+                  {isPositive && <ThumbsUp className="h-2.5 w-2.5" aria-hidden="true" />}
+                  {isNegative && <ThumbsDown className="h-2.5 w-2.5" aria-hidden="true" />}
+                  <span className="truncate">{meta.review_score_desc}</span>
+                </span>
+              ) : (
+                <span />
               )}
               {game.metacritic ? (
                 <span
